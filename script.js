@@ -4,7 +4,7 @@ function saveLeads() {
   localStorage.setItem("crmLeads", JSON.stringify(leads));
 }
 
-function calculateLeadScore(businessSize, digitalPresence, leadNeed, notes) {
+function calculateLeadScore(businessSize, digitalPresence, leadNeed, notes, priority) {
   let score = 40;
 
   if (businessSize === "Small") score += 8;
@@ -19,6 +19,10 @@ function calculateLeadScore(businessSize, digitalPresence, leadNeed, notes) {
   if (leadNeed === "Better follow-up") score += 16;
   if (leadNeed === "More qualified leads") score += 18;
   if (leadNeed === "Automation support") score += 20;
+
+  if (priority === "Hot") score += 10;
+  if (priority === "Warm") score += 5;
+  if (priority === "Cold") score -= 5;
 
   const lowerNotes = notes.toLowerCase();
 
@@ -67,12 +71,14 @@ function getPainPoint(digitalPresence, leadNeed, notes) {
   return notes || "The business may need a clearer digital growth and lead generation system.";
 }
 
-function getOutreachAngle(businessName, industry, leadNeed, painPoint) {
+function getOutreachAngle(businessName, industry, leadNeed, painPoint, followUpDate) {
   return `Hi ${businessName}, I noticed your business is in the ${industry} space. One possible opportunity is improving your ${leadNeed.toLowerCase()} process.
 
 ${painPoint}
 
-A simple AI-powered workflow could help organize leads, improve response speed, and create a more consistent follow-up system.`;
+A simple AI-powered workflow could help organize leads, improve response speed, and create a more consistent follow-up system.
+
+Suggested follow-up date: ${followUpDate}`;
 }
 
 function addLead() {
@@ -83,6 +89,8 @@ function addLead() {
   const businessSize = document.getElementById("businessSize").value;
   const digitalPresence = document.getElementById("digitalPresence").value;
   const leadNeed = document.getElementById("leadNeed").value;
+  const priority = document.getElementById("priority").value;
+  const followUpDate = document.getElementById("followUpDate").value;
   const notes = document.getElementById("notes").value.trim();
 
   if (
@@ -93,15 +101,17 @@ function addLead() {
     !businessSize ||
     !digitalPresence ||
     !leadNeed ||
+    !priority ||
+    !followUpDate ||
     !notes
   ) {
     alert("Please fill in all fields before adding the lead.");
     return;
   }
 
-  const score = calculateLeadScore(businessSize, digitalPresence, leadNeed, notes);
+  const score = calculateLeadScore(businessSize, digitalPresence, leadNeed, notes, priority);
   const painPoint = getPainPoint(digitalPresence, leadNeed, notes);
-  const outreachAngle = getOutreachAngle(businessName, industry, leadNeed, painPoint);
+  const outreachAngle = getOutreachAngle(businessName, industry, leadNeed, painPoint, followUpDate);
 
   const lead = {
     id: Date.now(),
@@ -112,6 +122,8 @@ function addLead() {
     businessSize,
     digitalPresence,
     leadNeed,
+    priority,
+    followUpDate,
     notes,
     score,
     painPoint,
@@ -125,8 +137,8 @@ function addLead() {
 
   document.getElementById("latestSummary").textContent =
     `${businessName} is a ${businessSize.toLowerCase()} ${industry} business located in ${location}. ` +
-    `Digital presence is ${digitalPresence.toLowerCase()}, and the main lead generation need is ${leadNeed.toLowerCase()}. ` +
-    `Lead score: ${score}/100. Pain point: ${painPoint}`;
+    `Digital presence is ${digitalPresence.toLowerCase()}, priority is ${priority}, and the main lead generation need is ${leadNeed.toLowerCase()}. ` +
+    `Follow-up date: ${followUpDate}. Lead score: ${score}/100. Pain point: ${painPoint}`;
 
   document.getElementById("latestOutreach").textContent = outreachAngle;
 
@@ -142,6 +154,8 @@ function clearForm() {
   document.getElementById("businessSize").value = "";
   document.getElementById("digitalPresence").value = "";
   document.getElementById("leadNeed").value = "";
+  document.getElementById("priority").value = "";
+  document.getElementById("followUpDate").value = "";
   document.getElementById("notes").value = "";
 }
 
@@ -206,12 +220,17 @@ function createLeadCard(lead) {
   const card = document.createElement("div");
   card.className = "lead-card";
 
+  const priority = lead.priority || "Not set";
+  const followUpDate = lead.followUpDate || "Not set";
+
   card.innerHTML = `
     <h4>${lead.businessName}</h4>
     <span class="score-pill">${lead.score}/100 • ${getScoreClass(lead.score)} Score</span>
+    <span class="priority-pill">${priority} Priority</span>
     <p><strong>Industry:</strong> ${lead.industry}</p>
     <p><strong>Location:</strong> ${lead.location}</p>
     <p><strong>Need:</strong> ${lead.leadNeed}</p>
+    <p><strong>Follow-up:</strong> ${followUpDate}</p>
     <p><strong>Digital Presence:</strong> ${lead.digitalPresence}</p>
     <p><strong>Notes:</strong> ${lead.notes}</p>
 
@@ -283,6 +302,23 @@ function updateStats() {
   document.getElementById("followUpLeads").textContent = followUp;
 }
 
+function copyLatestOutreach() {
+  const outreachText = document.getElementById("latestOutreach").textContent;
+
+  if (!outreachText || outreachText.includes("will appear here")) {
+    alert("Please add a lead first before copying the outreach message.");
+    return;
+  }
+
+  navigator.clipboard.writeText(outreachText)
+    .then(() => {
+      alert("Outreach message copied successfully.");
+    })
+    .catch(() => {
+      alert("Copy failed. Please select and copy the message manually.");
+    });
+}
+
 function exportCSV() {
   if (leads.length === 0) {
     alert("No leads available to export.");
@@ -297,6 +333,8 @@ function exportCSV() {
     "Business Size",
     "Digital Presence",
     "Lead Need",
+    "Priority",
+    "Follow-up Date",
     "Lead Score",
     "Status",
     "Notes"
@@ -310,6 +348,8 @@ function exportCSV() {
     lead.businessSize,
     lead.digitalPresence,
     lead.leadNeed,
+    lead.priority || "Not set",
+    lead.followUpDate || "Not set",
     lead.score,
     lead.status,
     lead.notes
